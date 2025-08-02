@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Suno Proxy Generator</title>
+  <style>
+    body { background: black; color: white; font-family: sans-serif; text-align: center; padding: 2rem; }
+    input, button { width: 80%; margin: 1rem 0; padding: 0.5rem; font-size: 1rem; }
+  </style>
+</head>
+<body>
+  <h2>Suno Proxy Generator</h2>
+  <input id="prompt" value="Shamanic flute ceremony Mystic" />
+  <button onclick="generate()">Generate</button>
+  <p id="status">🎵 Generating music...</p>
+  <script>
+    async function generate() {
+      const prompt = document.getElementById('prompt').value;
+      document.getElementById('status').innerText = '⏳ Sending prompt...';
+      try {
+        const resp = await fetch('/api/generate-music', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt })
+        });
+        const { taskId, error } = await resp.json();
+        if (!taskId) return alert("Error: " + (error || "No task ID"));
+
+        document.getElementById('status').innerText = '⏳ Polling...';
+        let done = false;
+        while (!done) {
+          await new Promise(r => setTimeout(r, 3000));
+          const check = await fetch(`/api/suno-status?taskId=${taskId}`);
+          const data = await check.json();
+          if (data?.audio_url) {
+            done = true;
+            document.getElementById('status').innerHTML = \`✅ Done!<br><audio controls src="\${data.audio_url}"></audio>\`;
+          }
+        }
+      } catch (e) {
+        alert("Error: " + e.message);
+      }
+    }
+  </script>
+</body>
+</html>
